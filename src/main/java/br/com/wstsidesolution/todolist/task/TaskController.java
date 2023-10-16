@@ -1,8 +1,11 @@
 package br.com.wstsidesolution.todolist.task;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,12 +20,24 @@ public class TaskController {
   private ITaskRepository taskRepository;
 
   @PostMapping("/")
-  public TaskModel create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
+  public ResponseEntity create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
     var loggedUserId = request.getAttribute("userId");
     taskModel.setUserId((UUID) loggedUserId);
 
+    var currentDate = LocalDateTime.now();
+
+    if (currentDate.isAfter(taskModel.getStartAt()) || currentDate.isAfter(taskModel.getEndAt())) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("The start date / end date needs to be bigger than current date.");
+    }
+
+    if (taskModel.getStartAt().isAfter(taskModel.getEndAt())) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("The start date needs to be shorter than end date.");
+    }
+
     var task = this.taskRepository.save(taskModel);
 
-    return task;
+    return ResponseEntity.ok(task);
   }
 }
